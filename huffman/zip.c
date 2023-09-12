@@ -5,6 +5,8 @@
 #include <string.h>
 
 #include "libs/linked_list.h"
+#include "libs/huffman.h"
+#include "libs/utils.c"
 
 #define DEBUG 1
 #define MAX_FILENAME_SIZE 256
@@ -43,11 +45,51 @@ bool get_byte_frequencies(FILE *input, byte_info_t bytes[256])
     uint8_t byte;
     while (fread(&byte, sizeof(uint8_t), 1, input) != 0)
     {
-        printf("%d\n", byte);
         bytes[byte].frequency += 1;
     }
 
     return true;
+}
+
+int compare_int(void *a, void *b)
+{
+    return *(uint64_t *)a - *(uint64_t *)b;
+}
+
+huff_node_t *huffmanizeQ(huff_heap_t *heap)
+{
+    while (heap->size != 1)
+    {
+        huff_node_t *left = hp_dequeue(heap);
+        huff_node_t *right = hp_dequeue(heap);
+
+        uint8_t *internal_node = malloc(sizeof(uint8_t));
+        *internal_node = 42;
+        hp_enqueue(heap, (void *)internal_node, left->frequency + right->frequency, left, right);
+    }
+
+    return heap->data[1];
+
+    // if (huff->head->next == NULL)
+    // {
+    //     return deQ(huff);
+    // }
+
+    // HuffNode *left = deQ(huff);
+    // HuffNode *right = deQ(huff);
+
+    // enQ(huff, NULL, left->priority + right->priority, left, right);
+    // huffmanizeQ(huff);
+}
+
+void preorder(huff_node_t *ht)
+{
+    if (ht != NULL)
+    {
+        printf("%d ", *(uint8_t *)ht->item);
+        preorder(ht->left);
+        preorder(ht->right);
+    }
 }
 
 int main(void)
@@ -74,17 +116,40 @@ int main(void)
     init_byte_info_array(bytes);
     get_byte_frequencies(input, bytes);
 
-    if (DEBUG)
+    // if (DEBUG)
+    // {
+    //     for (int i = 0; i < 256; i++)
+    //     {
+    //         if (bytes[i].frequency != 0)
+    //             printf("byte=%d (%c) (freq=%d)\n", bytes[i].byte, bytes[i].byte, bytes[i].frequency);
+    //     }
+    // }
+
+    huff_heap_t *hh = hp_create(260, print_byte, compare_int);
+    for (int i = 0; i < 256; i++)
     {
-        for (int i = 0; i < 256; i++)
+        if (bytes[i].frequency != 0)
         {
-            printf("byte=%d (freq=%d)\n", bytes[i].byte, bytes[i].frequency);
+            hp_enqueue(hh, (void *)&bytes[i].byte, bytes[i].frequency, NULL, NULL);
         }
     }
 
-    char zipped_path[MAX_FILENAME_SIZE];
-    get_zipped_path(zipped_path, file_path);
-    printf("new->%s\n", zipped_path);
+    // hp_print(hh);
+
+    // printf("-----------------\n");
+    // while (hh->size != 0)
+    // {
+    //     huff_node_t *deq = hp_dequeue(hh);
+    //     // printf("(freq=%lld) byte=%c\n", deq->frequency, *(uint8_t *)deq->item);
+    //     printf("%d\n", *(uint8_t *)deq->item);
+    // }
+    huff_node_t *root = huffmanizeQ(hh);
+    preorder(root);
+    // printf("\nsize=%d\n", hh->size);
+
+    // char zipped_path[MAX_FILENAME_SIZE];
+    // get_zipped_path(zipped_path, file_path);
+    // printf("new->%s\n", zipped_path);
     fclose(input);
 
     return 0;
