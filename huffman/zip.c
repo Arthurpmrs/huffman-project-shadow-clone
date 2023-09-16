@@ -9,7 +9,7 @@
 #include "libs/huffman.h"
 #include "libs/utils.c"
 
-#define DEBUG 1
+#define DEBUG 0
 #define MAX_FILENAME_SIZE 1024
 #define TMP_FILE_NAME "tmp"
 

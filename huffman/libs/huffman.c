@@ -1,5 +1,16 @@
 #include "huffman.h"
 
+bool is_special_node(huff_node_t *node)
+{
+    bool is_leaf = node->left == NULL &&
+                   node->right == NULL;
+
+    bool is_special_char = *(uint8_t *)node->byte == '\\' ||
+                           *(uint8_t *)node->byte == '*';
+
+    return is_leaf && is_special_char;
+}
+
 huff_queue_t *huff_create_queue()
 {
     huff_queue_t *new_queue = malloc(sizeof(huff_queue_t));
@@ -76,40 +87,21 @@ huff_node_t *huff_get_tree_from_queue(huff_queue_t *hq)
     return hq->head;
 }
 
-bool is_special_node(huff_node_t *node)
-{
-    bool is_leaf = node->left == NULL &&
-                   node->right == NULL;
-    bool is_special_char = *(uint8_t *)node->byte == '\\' ||
-                           *(uint8_t *)node->byte == '*';
-
-    return is_leaf && is_special_char;
-}
-
 uint16_t huff_get_tree_size(huff_node_t *ht)
 {
     if (ht != NULL)
     {
-        uint16_t current_count = 1;
-
-        // Check if the node is a leaf
-        // if (ht->left == NULL && ht->right == NULL)
-        // {
-        //     // Check if a scape character needs to be counter
-        //     if (*(uint8_t *)ht->byte == '\\' || *(uint8_t *)ht->byte == '*')
-        //     {
-        //         current_count += 1;
-        //     }
-        // }
-        if (is_special_node(ht))
-        {
-            current_count += 1;
-        }
-
         uint16_t left_size = huff_get_tree_size(ht->left);
         uint16_t right_size = huff_get_tree_size(ht->right);
 
-        return current_count + left_size + right_size;
+        if (is_special_node(ht))
+        {
+            return 2 + left_size + right_size;
+        }
+        else
+        {
+            return 1 + left_size + right_size;
+        }
     }
     return 0;
 }
@@ -118,22 +110,6 @@ void huff_write_tree_to_file(huff_node_t *ht, FILE *output)
 {
     if (ht != NULL)
     {
-        // if (ht->left == NULL && ht->right == NULL)
-        // {
-        //     // Check if a scape character needs to be written
-        //     if (*(uint8_t *)ht->byte == '\\' || *(uint8_t *)ht->byte == '*')
-        //     {
-        //         uint8_t c = '\\';
-        //         fwrite(&c, sizeof(uint8_t), 1, output);
-        //     }
-
-        //     fwrite((uint8_t *)ht->byte, sizeof(uint8_t), 1, output);
-        // }
-        // else
-        // {
-        //     fwrite((uint8_t *)ht->byte, sizeof(uint8_t), 1, output);
-        // }
-
         if (is_special_node(ht))
         {
             uint8_t c = '\\';
@@ -151,20 +127,6 @@ void huff_print_tree(huff_node_t *ht)
 {
     if (ht != NULL)
     {
-        // if (ht->left == NULL && ht->right == NULL)
-        // {
-        //     if (*(uint8_t *)ht->byte == '\\' || *(uint8_t *)ht->byte == '*')
-        //     {
-        //         printf("\\\n");
-        //     }
-
-        //     printf("%d\n", *(uint8_t *)ht->byte);
-        // }
-        // else
-        // {
-        //     printf("%d\n", *(uint8_t *)ht->byte);
-        // }
-
         if (is_special_node(ht))
         {
             printf("%d", '\\');
