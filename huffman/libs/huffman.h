@@ -43,4 +43,8 @@ huff_node_t *hp_dequeue(huff_heap_t *heap);
 
 void hp_print(huff_heap_t *heap);
 
+uint16_t get_huff_tree_size(huff_node_t *ht);
+
+void write_preorder_huff_tree(huff_node_t *ht, FILE *output);
+
 #endif

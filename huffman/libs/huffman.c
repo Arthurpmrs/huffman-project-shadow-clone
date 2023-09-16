@@ -164,6 +164,41 @@ void hp_print(huff_heap_t *heap)
     printf("\n");
 }
 
+uint16_t get_huff_tree_size(huff_node_t *ht)
+{
+    if (ht != NULL)
+    {
+        uint16_t left_size = get_huff_tree_size(ht->left);
+        uint16_t right_size = get_huff_tree_size(ht->right);
+        return 1 + left_size + right_size;
+    }
+    return 0;
+}
+
+void write_preorder_huff_tree(huff_node_t *ht, FILE *output)
+{
+    if (ht != NULL)
+    {
+        if (ht->left == NULL & ht->right == NULL)
+        {
+            if (*(uint8_t *)ht->item == '\\' || *(uint8_t *)ht->item == '*')
+            {
+                uint8_t c = '\\';
+                fwrite(&c, sizeof(uint8_t), 1, output);
+            }
+
+            fwrite((uint8_t *)ht->item, sizeof(uint8_t), 1, output);
+        }
+        else
+        {
+            fwrite((uint8_t *)ht->item, sizeof(uint8_t), 1, output);
+        }
+
+        write_preorder_huff_tree(ht->left, output);
+        write_preorder_huff_tree(ht->right, output);
+    }
+}
+
 // void *hp_clear(huff_heap_t *heap)
 // {
 //     free(heap->data);

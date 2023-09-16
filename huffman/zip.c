@@ -87,7 +87,7 @@ void preorder(huff_node_t *ht)
 {
     if (ht != NULL)
     {
-        printf("%d ", *(uint8_t *)ht->item);
+        printf("%c ", *(uint8_t *)ht->item);
         preorder(ht->left);
         preorder(ht->right);
     }
@@ -121,8 +121,6 @@ void get_zipped_bits(huff_node_t *ht, byte_info_t bytes[256], stack_t *aux_stack
 {
     if (ht->left == NULL && ht->right == NULL)
     {
-        // printf("%d (%c) => ", *(uint8_t *)ht->item, *(uint8_t *)ht->item);
-        // stack_print(aux_stack);
         stack_copy_to_list(aux_stack, bytes[*(uint8_t *)ht->item].zipped_bits);
     }
     else
@@ -137,12 +135,161 @@ void get_zipped_bits(huff_node_t *ht, byte_info_t bytes[256], stack_t *aux_stack
     }
 }
 
+huff_node_t *create_empty_binary_tree()
+{
+    huff_node_t *bt = malloc(sizeof(huff_node_t));
+    bt->left = NULL;
+    bt->right = NULL;
+    return bt;
+}
+
+huff_node_t *create_binary_tree(void *item, huff_node_t *left, huff_node_t *right)
+{
+    huff_node_t *bt = create_empty_binary_tree();
+    bt->left = left;
+    bt->right = right;
+    bt->item = item;
+    return bt;
+}
+
+huff_node_t *mock_tree()
+{
+    uint8_t *a = malloc(sizeof(uint8_t));
+    *a = 'A';
+    uint8_t *b = malloc(sizeof(uint8_t));
+    *b = 'B';
+    uint8_t *c = malloc(sizeof(uint8_t));
+    *c = 'C';
+    uint8_t *d = malloc(sizeof(uint8_t));
+    *d = 'D';
+    uint8_t *e = malloc(sizeof(uint8_t));
+    *e = 'E';
+    uint8_t *f = malloc(sizeof(uint8_t));
+    *f = 'F';
+    uint8_t *ast = malloc(sizeof(uint8_t));
+    *ast = '*';
+    return create_binary_tree(
+        (void *)ast,
+        create_binary_tree(
+            (void *)ast,
+            create_binary_tree((void *)c, NULL, NULL),
+            create_binary_tree((void *)b, NULL, NULL)),
+        create_binary_tree(
+            (void *)ast,
+            create_binary_tree(
+                (void *)ast,
+                create_binary_tree(
+                    (void *)ast,
+                    create_binary_tree((void *)f, NULL, NULL),
+                    create_binary_tree((void *)e, NULL, NULL)),
+                create_binary_tree((void *)d, NULL, NULL)),
+            create_binary_tree((void *)a, NULL, NULL)));
+}
+
+bool zip_to_tmp_file(FILE *input, uint8_t *trash_size, byte_info_t bytes[256])
+{
+    if (input == NULL)
+    {
+        return false;
+    }
+
+    FILE *tmp = fopen("tmp", "wb");
+
+    uint8_t byte = 0;
+    uint8_t compressed_byte = 0;
+    uint8_t compressed_bit_index = 7;
+    while (fread(&byte, sizeof(uint8_t), 1, input) != 0)
+    {
+        printf("%c\n", byte);
+        list_node_t *current_zipped_bit = bytes[byte].zipped_bits->head;
+        while (current_zipped_bit != NULL)
+        {
+            printf("    (z_bit=%d) | bit_index=%d\n", *(uint8_t *)current_zipped_bit->item, compressed_bit_index);
+            if (*(uint8_t *)current_zipped_bit->item == 1)
+            {
+                compressed_byte = set_bit(compressed_byte, compressed_bit_index);
+            }
+            printf("    byte=");
+            print_as_bin(compressed_byte, 8);
+
+            if (compressed_bit_index == 0)
+            {
+                fwrite(&compressed_byte, sizeof(uint8_t), 1, tmp);
+                compressed_bit_index = 7;
+                compressed_byte = 0;
+            }
+            else
+            {
+                compressed_bit_index -= 1;
+            }
+
+            current_zipped_bit = current_zipped_bit->next;
+        }
+    }
+
+    if (compressed_bit_index < 7)
+    {
+        fwrite(&compressed_byte, sizeof(uint8_t), 1, tmp);
+    }
+
+    printf("compressed_bit_index = %d\n", compressed_bit_index);
+    printf("trash = %d\n", compressed_bit_index + 1);
+    *trash_size = compressed_bit_index + 1;
+    fclose(tmp);
+    return true;
+}
+
+bool set_header(FILE *output, huff_node_t *ht, uint8_t trash_size)
+{
+    uint16_t tree_size = get_huff_tree_size(ht);
+    uint8_t header_size_bytes[2];
+    // tree_size = 590;
+    // print_as_bin(tree_size, 16);
+    header_size_bytes[0] = trash_size << 5 | tree_size >> 8;
+    header_size_bytes[1] = tree_size;
+
+    // uint16_t size_bytes = trash_size << 13 | tree_size;
+    fwrite(&header_size_bytes, sizeof(uint8_t), 2, output);
+    // print_as_bin(size_bytes, 16);
+
+    write_preorder_huff_tree(ht, output);
+    return true;
+}
+
+bool zip(FILE *input, char zipped_path[MAX_FILENAME_SIZE], huff_node_t *ht, byte_info_t bytes[256])
+{
+    if (input == NULL || ht == NULL)
+    {
+        return false;
+    }
+
+    fseek(input, 0, SEEK_SET);
+    FILE *output = fopen(zipped_path, "wb");
+
+    uint8_t trash_size = 0;
+
+    zip_to_tmp_file(input, &trash_size, bytes);
+
+    set_header(output, ht, trash_size);
+
+    FILE *tmp_file = fopen("tmp", "rb");
+    uint8_t byte = 0;
+    while (fread(&byte, sizeof(uint8_t), 1, tmp_file) != 0)
+    {
+        fwrite(&byte, sizeof(uint8_t), 1, output);
+    }
+
+    fclose(tmp_file);
+    fclose(output);
+    return true;
+}
+
 int main(void)
 {
     char file_path[MAX_FILENAME_SIZE - 5];
     if (DEBUG)
     {
-        strcpy(file_path, "examples/slide.txt");
+        strcpy(file_path, "examples/bocchi.jpg");
     }
     else
     {
@@ -189,6 +336,7 @@ int main(void)
     //     printf("%d\n", *(uint8_t *)deq->item);
     // }
     huff_node_t *root = huffmanizeQ(hh);
+    // huff_node_t *root = mock_tree();
     preorder(root);
 
     printf("\n");
@@ -204,11 +352,13 @@ int main(void)
         }
     }
 
+    char zipped_path[MAX_FILENAME_SIZE];
+    get_zipped_path(zipped_path, file_path);
+    printf("new->%s\n", zipped_path);
+    zip(input, zipped_path, root, bytes);
+
     // printf("\nsize=%d\n", hh->size);
 
-    // char zipped_path[MAX_FILENAME_SIZE];
-    // get_zipped_path(zipped_path, file_path);
-    // printf("new->%s\n", zipped_path);
     fclose(input);
 
     return 0;
