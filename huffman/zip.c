@@ -57,19 +57,24 @@ int compare_int(void *a, void *b)
     return *(uint64_t *)a - *(uint64_t *)b;
 }
 
-huff_node_t *huffmanizeQ(huff_heap_t *heap)
+huff_node_t *huffmanize(huff_queue_t *hq)
 {
-    while (heap->size != 1)
+    while (hq->size != 1)
     {
-        huff_node_t *left = hp_dequeue(heap);
-        huff_node_t *right = hp_dequeue(heap);
+        // printf("--------------------(size=%d) byte=%d\n", hq->size, *(uint8_t *)hq->head->byte);
+        huff_node_t *left = huff_dequeue(hq);
+        // printf("    size=%d\n", hq->size);
+        huff_node_t *right = huff_dequeue(hq);
+        // printf("    size=%d\n", hq->size);
 
         uint8_t *internal_node = malloc(sizeof(uint8_t));
         *internal_node = 42;
-        hp_enqueue(heap, (void *)internal_node, left->frequency + right->frequency, left, right);
+        huff_enqueue(hq, (void *)internal_node, left->frequency + right->frequency, left, right);
+        // printf("    size=%d\n", hq->size);
+        // printf("  OUTSIDE>>>size(%d) head=%p tail=%p\n", hq->size, hq->head, NULL);
     }
 
-    return heap->data[1];
+    return hq->head;
 
     // if (huff->head->next == NULL)
     // {
@@ -87,7 +92,7 @@ void preorder(huff_node_t *ht)
 {
     if (ht != NULL)
     {
-        printf("%c ", *(uint8_t *)ht->item);
+        printf("%d\n", *(uint8_t *)ht->byte);
         preorder(ht->left);
         preorder(ht->right);
     }
@@ -121,7 +126,7 @@ void get_zipped_bits(huff_node_t *ht, byte_info_t bytes[256], stack_t *aux_stack
 {
     if (ht->left == NULL && ht->right == NULL)
     {
-        stack_copy_to_list(aux_stack, bytes[*(uint8_t *)ht->item].zipped_bits);
+        stack_copy_to_list(aux_stack, bytes[*(uint8_t *)ht->byte].zipped_bits);
     }
     else
     {
@@ -148,7 +153,7 @@ huff_node_t *create_binary_tree(void *item, huff_node_t *left, huff_node_t *righ
     huff_node_t *bt = create_empty_binary_tree();
     bt->left = left;
     bt->right = right;
-    bt->item = item;
+    bt->byte = item;
     return bt;
 }
 
@@ -242,6 +247,8 @@ bool zip_to_tmp_file(FILE *input, uint8_t *trash_size, byte_info_t bytes[256])
 bool set_header(FILE *output, huff_node_t *ht, uint8_t trash_size)
 {
     uint16_t tree_size = get_huff_tree_size(ht);
+    printf("trash=%d, tree_size=%d\n", trash_size, tree_size);
+
     uint8_t header_size_bytes[2];
     // tree_size = 590;
     // print_as_bin(tree_size, 16);
@@ -284,6 +291,30 @@ bool zip(FILE *input, char zipped_path[MAX_FILENAME_SIZE], huff_node_t *ht, byte
     return true;
 }
 
+void print_preorder_huff_tree(huff_node_t *ht)
+{
+    if (ht != NULL)
+    {
+        if (ht->left == NULL & ht->right == NULL)
+        {
+            if (*(uint8_t *)ht->byte == '\\' || *(uint8_t *)ht->byte == '*')
+            {
+                uint8_t c = '\\';
+                printf("%d\n", c);
+            }
+
+            printf("%d\n", *(uint8_t *)ht->byte);
+        }
+        else
+        {
+            printf("%d\n", *(uint8_t *)ht->byte);
+        }
+
+        print_preorder_huff_tree(ht->left);
+        print_preorder_huff_tree(ht->right);
+    }
+}
+
 int main(void)
 {
     char file_path[MAX_FILENAME_SIZE - 5];
@@ -316,13 +347,12 @@ int main(void)
     //             printf("byte=%d (%c) (freq=%d)\n", bytes[i].byte, bytes[i].byte, bytes[i].frequency);
     //     }
     // }
-
-    huff_heap_t *hh = hp_create(260, print_byte, compare_int);
+    huff_queue_t *hq = huff_create_queue();
     for (int i = 0; i < 256; i++)
     {
         if (bytes[i].frequency != 0)
         {
-            hp_enqueue(hh, (void *)&bytes[i].byte, bytes[i].frequency, NULL, NULL);
+            huff_enqueue(hq, (void *)&bytes[i].byte, bytes[i].frequency, NULL, NULL);
         }
     }
 
@@ -335,22 +365,30 @@ int main(void)
     //     // printf("(freq=%lld) byte=%c\n", deq->frequency, *(uint8_t *)deq->item);
     //     printf("%d\n", *(uint8_t *)deq->item);
     // }
-    huff_node_t *root = huffmanizeQ(hh);
+    // huff_node_t *current = hq->head;
+    // while (current != NULL)
+    // {
+    //     printf("%d (%c) : %lld\n", *(uint8_t *)current->byte, *(uint8_t *)current->byte, current->frequency);
+    //     current = current->next;
+    // }
+    // printf("size=%d\n", hq->size);
+    huff_node_t *root = huffmanize(hq);
     // huff_node_t *root = mock_tree();
-    preorder(root);
+    // preorder(root);
+    print_preorder_huff_tree(root);
 
     printf("\n");
     stack_t *aux_stack = stack_create(print_byte_int);
     get_zipped_bits(root, bytes, aux_stack);
 
-    for (int i = 0; i < 256; i++)
-    {
-        if (bytes[i].frequency != 0)
-        {
-            printf("%d (%c) => ", bytes[i].byte, bytes[i].byte);
-            list_print(bytes[i].zipped_bits);
-        }
-    }
+    // for (int i = 0; i < 256; i++)
+    // {
+    //     if (bytes[i].frequency != 0)
+    //     {
+    //         printf("%d (%c) => ", bytes[i].byte, bytes[i].byte);
+    //         list_print(bytes[i].zipped_bits);
+    //     }
+    // }
 
     char zipped_path[MAX_FILENAME_SIZE];
     get_zipped_path(zipped_path, file_path);
