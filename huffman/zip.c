@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "libs/linked_list.h"
+#include "libs/stack.h"
 #include "libs/huffman.h"
 #include "libs/utils.c"
 
@@ -16,7 +17,7 @@ struct byte_info
 {
     uint8_t byte;
     uint64_t frequency;
-    list_t *mapped_bits;
+    list_t *zipped_bits;
 };
 
 bool get_zipped_path(char zipped[MAX_FILENAME_SIZE], char file[MAX_FILENAME_SIZE - 5])
@@ -31,7 +32,7 @@ void init_byte_info_array(byte_info_t bytes[256])
     {
         bytes[i].byte = i;
         bytes[i].frequency = 0;
-        bytes[i].mapped_bits = NULL;
+        bytes[i].zipped_bits = list_create(print_byte_int);
     }
 }
 
@@ -92,12 +93,56 @@ void preorder(huff_node_t *ht)
     }
 }
 
+void stack_push_bit(stack_t *stack, uint8_t bit_value)
+{
+    uint8_t *bit = malloc(sizeof(uint8_t));
+    *bit = bit_value;
+    stack_push(stack, (void *)bit);
+}
+
+// void list_add_bit_to_head(list_t *list, uint8_t bit_value)
+// {
+//     uint8_t *bit = malloc(sizeof(uint8_t));
+//     *bit = bit_value;
+//     list_add_to_head(list, (void *)bit);
+// }
+
+void stack_copy_to_list(stack_t *stack, list_t *list)
+{
+    stack_node_t *current = stack->top;
+    while (current != NULL)
+    {
+        list_add_to_head(list, current->item);
+        current = current->next;
+    }
+}
+
+void get_zipped_bits(huff_node_t *ht, byte_info_t bytes[256], stack_t *aux_stack)
+{
+    if (ht->left == NULL && ht->right == NULL)
+    {
+        // printf("%d (%c) => ", *(uint8_t *)ht->item, *(uint8_t *)ht->item);
+        // stack_print(aux_stack);
+        stack_copy_to_list(aux_stack, bytes[*(uint8_t *)ht->item].zipped_bits);
+    }
+    else
+    {
+        stack_push_bit(aux_stack, 0);
+        get_zipped_bits(ht->left, bytes, aux_stack);
+        stack_pop(aux_stack);
+
+        stack_push_bit(aux_stack, 1);
+        get_zipped_bits(ht->right, bytes, aux_stack);
+        stack_pop(aux_stack);
+    }
+}
+
 int main(void)
 {
     char file_path[MAX_FILENAME_SIZE - 5];
     if (DEBUG)
     {
-        strcpy(file_path, "examples/kobayashi.jpg");
+        strcpy(file_path, "examples/slide.txt");
     }
     else
     {
@@ -145,6 +190,20 @@ int main(void)
     // }
     huff_node_t *root = huffmanizeQ(hh);
     preorder(root);
+
+    printf("\n");
+    stack_t *aux_stack = stack_create(print_byte_int);
+    get_zipped_bits(root, bytes, aux_stack);
+
+    for (int i = 0; i < 256; i++)
+    {
+        if (bytes[i].frequency != 0)
+        {
+            printf("%d (%c) => ", bytes[i].byte, bytes[i].byte);
+            list_print(bytes[i].zipped_bits);
+        }
+    }
+
     // printf("\nsize=%d\n", hh->size);
 
     // char zipped_path[MAX_FILENAME_SIZE];

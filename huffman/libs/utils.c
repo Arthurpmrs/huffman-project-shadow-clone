@@ -46,3 +46,8 @@ void print_byte(void *item)
 {
     printf("%c", *(uint8_t *)item);
 }
+
+void print_byte_int(void *item)
+{
+    printf("%d", *(uint8_t *)item);
+}

@@ -34,4 +34,5 @@ void *list_delete_from_head(list_t *list);
 
 bool list_delete(list_t *list);
 
+bool list_print(list_t *list);
 #endif // HUFFMAN_LINKED_LIST_H_
