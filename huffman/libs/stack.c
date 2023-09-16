@@ -67,3 +67,20 @@ void stack_print(stack_t *stack)
     }
     printf("\n");
 }
+
+void stack_push_bit(stack_t *stack, uint8_t bit_value)
+{
+    uint8_t *bit = malloc(sizeof(uint8_t));
+    *bit = bit_value;
+    stack_push(stack, (void *)bit);
+}
+
+void stack_copy_to_list(stack_t *stack, list_t *list)
+{
+    stack_node_t *current = stack->top;
+    while (current != NULL)
+    {
+        list_add_to_head(list, current->item);
+        current = current->next;
+    }
+}

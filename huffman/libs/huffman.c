@@ -1,23 +1,5 @@
 #include "huffman.h"
 
-// typedef struct huff_node huff_node_t;
-// struct huff_node
-// {
-//     void *byte;
-//     uint64_t priority;
-//     huff_node_t *next;
-//     huff_node_t *left;
-//     huff_node_t *right;
-// };
-
-// typedef struct huff_queue huff_queue_t;
-// struct huff_queue
-// {
-//     uint16_t size;
-//     huff_node_t *head;
-//     huff_node_t *tail;
-// };
-
 huff_queue_t *huff_create_queue()
 {
     huff_queue_t *new_queue = malloc(sizeof(huff_queue_t));
@@ -35,10 +17,8 @@ void huff_enqueue(huff_queue_t *hq, void *byte, uint64_t frequency,
     new_node->left = left;
     new_node->right = right;
 
-    // printf(">>ENQUEUE=%d (fre=%d)\n", *(uint8_t *)byte, frequency);
     if (hq->head == NULL)
     {
-        // printf("eeeeeeee\n");
         new_node->next = NULL;
         hq->head = new_node;
     }
@@ -74,8 +54,6 @@ huff_node_t *huff_dequeue(huff_queue_t *hq)
 
     huff_node_t *dequeded = hq->head;
 
-    // printf("DEQ>>>size(%d) head=%p tail=%p\n", hq->size, hq->head, NULL);
-
     hq->head = hq->head->next;
 
     hq->size -= 1;
@@ -83,217 +61,118 @@ huff_node_t *huff_dequeue(huff_queue_t *hq)
     return dequeded;
 }
 
-// void swap(huff_node_t **a, huff_node_t **b)
-// {
-//     huff_node_t *tmp = *a;
-//     *a = *b;
-//     *b = tmp;
-// }
+huff_node_t *huff_get_tree_from_queue(huff_queue_t *hq)
+{
+    while (hq->size != 1)
+    {
+        huff_node_t *left = huff_dequeue(hq);
+        huff_node_t *right = huff_dequeue(hq);
 
-// huff_heap_t *hp_create(uint16_t capacity, void (*print)(void *),
-//                        int (*compare)(void *, void *))
-// {
-//     huff_node_t **data = malloc(capacity * sizeof(huff_node_t *));
+        uint8_t *internal_node = malloc(sizeof(uint8_t));
+        *internal_node = 42;
+        huff_enqueue(hq, (void *)internal_node, left->frequency + right->frequency, left, right);
+    }
 
-//     if (data == NULL)
-//     {
-//         exit(EXIT_FAILURE);
-//     }
+    return hq->head;
+}
 
-//     huff_heap_t *new_heap = malloc(sizeof(huff_heap_t));
-//     new_heap->size = 0;
-//     new_heap->capacity = capacity;
-//     new_heap->data = data;
-//     new_heap->compare = compare;
-//     new_heap->print = print;
-//     return new_heap;
-// }
+bool is_special_node(huff_node_t *node)
+{
+    bool is_leaf = node->left == NULL &&
+                   node->right == NULL;
+    bool is_special_char = *(uint8_t *)node->byte == '\\' ||
+                           *(uint8_t *)node->byte == '*';
 
-// huff_node_t *huff_create_node(void *item, uint64_t frequency, huff_node_t *left, huff_node_t *right)
-// {
-//     huff_node_t *new_node = malloc(sizeof(huff_node_t));
-//     new_node->item = item;
-//     new_node->frequency = frequency;
-//     new_node->left = left;
-//     new_node->right = right;
-//     return new_node;
-// }
+    return is_leaf && is_special_char;
+}
 
-// uint32_t hp_get_parent_index(uint32_t i)
-// {
-//     return i >> 1;
-// }
-
-// uint32_t hp_get_left_index(uint32_t i)
-// {
-//     return i << 1;
-// }
-
-// uint32_t hp_get_right_index(uint32_t i)
-// {
-//     return (i << 1) + 1;
-// }
-
-// huff_node_t *hp_item_of(huff_heap_t *heap, uint32_t i)
-// {
-//     return heap->data[i];
-// }
-
-// void hp_enqueue(huff_heap_t *heap, void *item, uint64_t frequency, huff_node_t *left, huff_node_t *right)
-// {
-//     if (heap == NULL)
-//     {
-//         exit(EXIT_FAILURE);
-//     }
-
-//     if (heap->size >= heap->capacity)
-//     {
-//         printf("Heap overflow.\n");
-//         return;
-//     }
-
-//     huff_node_t *new_node = huff_create_node(item, frequency, left, right);
-
-//     heap->size += 1;
-//     uint32_t new_item_index = heap->size;
-//     heap->data[new_item_index] = new_node;
-
-//     uint32_t parent_index = hp_get_parent_index(heap->size);
-
-//     while (parent_index >= 1 &&
-//            heap->data[new_item_index]->frequency < heap->data[parent_index]->frequency)
-//     {
-//         swap(&heap->data[new_item_index], &heap->data[parent_index]);
-//         new_item_index = parent_index;
-//         parent_index = hp_get_parent_index(new_item_index);
-//     }
-// }
-
-// void hp_min_heapify(huff_heap_t *heap, uint32_t origin)
-// {
-//     if (heap == NULL)
-//     {
-//         exit(EXIT_FAILURE);
-//     }
-
-//     uint32_t smallest;
-//     uint32_t left_index = hp_get_left_index(origin);
-//     uint32_t right_index = hp_get_right_index(origin);
-
-//     // printf("size=%d\n", heap->size);
-//     // printf("    left=%d(%d)|right=%d(%d)|origin=%d(%d)\n", left_index,
-//     //        heap->data[left_index]->frequency, right_index, heap->data[right_index]->frequency,
-//     //        origin, heap->data[origin]->frequency);
-
-//     if (left_index <= heap->size &&
-//         heap->data[left_index]->frequency < heap->data[origin]->frequency)
-//     {
-//         smallest = left_index;
-//     }
-//     else
-//     {
-//         smallest = origin;
-//     }
-
-//     // printf("            smallest=%d\n", smallest);
-//     if (right_index <= heap->size &&
-//         heap->data[right_index]->frequency < heap->data[smallest]->frequency)
-//     {
-//         smallest = right_index;
-//     }
-
-//     // printf("            smallest=%d\n", smallest);
-//     if (heap->data[origin]->frequency != heap->data[smallest]->frequency)
-//     {
-//         swap(&heap->data[origin], &heap->data[smallest]);
-//         hp_min_heapify(heap, smallest);
-//     }
-// }
-
-// huff_node_t *hp_dequeue(huff_heap_t *heap)
-// {
-//     // hp_print(heap);
-//     if (heap == NULL)
-//     {
-//         exit(EXIT_FAILURE);
-//     }
-
-//     if (heap->size == 0)
-//     {
-//         printf("Heap underflow.\n");
-//         return NULL;
-//     }
-
-//     huff_node_t *item = heap->data[1];
-//     heap->data[1] = heap->data[heap->size];
-//     heap->size -= 1;
-
-//     // from root
-//     // hp_print(heap);
-//     hp_min_heapify(heap, 1);
-//     // hp_print(heap);
-
-//     return item;
-// }
-
-// void hp_print(huff_heap_t *heap)
-// {
-//     for (int i = 1; i < heap->size + 1; i++)
-//     {
-//         // heap->print(heap->data[i]->item);
-//         printf("%lld", heap->data[i]->frequency);
-//         printf(" ");
-//     }
-//     printf("\n");
-// }
-
-uint16_t get_huff_tree_size(huff_node_t *ht)
+uint16_t huff_get_tree_size(huff_node_t *ht)
 {
     if (ht != NULL)
     {
-        int current_frame_count = 1;
-        if (ht->left == NULL & ht->right == NULL)
+        uint16_t current_count = 1;
+
+        // Check if the node is a leaf
+        // if (ht->left == NULL && ht->right == NULL)
+        // {
+        //     // Check if a scape character needs to be counter
+        //     if (*(uint8_t *)ht->byte == '\\' || *(uint8_t *)ht->byte == '*')
+        //     {
+        //         current_count += 1;
+        //     }
+        // }
+        if (is_special_node(ht))
         {
-            if (*(uint8_t *)ht->byte == '\\' || *(uint8_t *)ht->byte == '*')
-            {
-                current_frame_count += 1;
-            }
+            current_count += 1;
         }
 
-        uint16_t left_size = get_huff_tree_size(ht->left);
-        uint16_t right_size = get_huff_tree_size(ht->right);
-        return current_frame_count + left_size + right_size;
+        uint16_t left_size = huff_get_tree_size(ht->left);
+        uint16_t right_size = huff_get_tree_size(ht->right);
+
+        return current_count + left_size + right_size;
     }
     return 0;
 }
 
-void write_preorder_huff_tree(huff_node_t *ht, FILE *output)
+void huff_write_tree_to_file(huff_node_t *ht, FILE *output)
 {
     if (ht != NULL)
     {
-        if (ht->left == NULL & ht->right == NULL)
-        {
-            if (*(uint8_t *)ht->byte == '\\' || *(uint8_t *)ht->byte == '*')
-            {
-                uint8_t c = '\\';
-                fwrite(&c, sizeof(uint8_t), 1, output);
-            }
+        // if (ht->left == NULL && ht->right == NULL)
+        // {
+        //     // Check if a scape character needs to be written
+        //     if (*(uint8_t *)ht->byte == '\\' || *(uint8_t *)ht->byte == '*')
+        //     {
+        //         uint8_t c = '\\';
+        //         fwrite(&c, sizeof(uint8_t), 1, output);
+        //     }
 
-            fwrite((uint8_t *)ht->byte, sizeof(uint8_t), 1, output);
-        }
-        else
+        //     fwrite((uint8_t *)ht->byte, sizeof(uint8_t), 1, output);
+        // }
+        // else
+        // {
+        //     fwrite((uint8_t *)ht->byte, sizeof(uint8_t), 1, output);
+        // }
+
+        if (is_special_node(ht))
         {
-            fwrite((uint8_t *)ht->byte, sizeof(uint8_t), 1, output);
+            uint8_t c = '\\';
+            fwrite(&c, sizeof(uint8_t), 1, output);
         }
 
-        write_preorder_huff_tree(ht->left, output);
-        write_preorder_huff_tree(ht->right, output);
+        fwrite((uint8_t *)ht->byte, sizeof(uint8_t), 1, output);
+
+        huff_write_tree_to_file(ht->left, output);
+        huff_write_tree_to_file(ht->right, output);
     }
 }
 
-// void *hp_clear(huff_heap_t *heap)
-// {
-//     free(heap->data);
-//     free(heap);
-//     return NULL;
-// }
+void huff_print_tree(huff_node_t *ht)
+{
+    if (ht != NULL)
+    {
+        // if (ht->left == NULL && ht->right == NULL)
+        // {
+        //     if (*(uint8_t *)ht->byte == '\\' || *(uint8_t *)ht->byte == '*')
+        //     {
+        //         printf("\\\n");
+        //     }
+
+        //     printf("%d\n", *(uint8_t *)ht->byte);
+        // }
+        // else
+        // {
+        //     printf("%d\n", *(uint8_t *)ht->byte);
+        // }
+
+        if (is_special_node(ht))
+        {
+            printf("%d", '\\');
+        }
+
+        printf("%d", *(uint8_t *)ht->byte);
+
+        huff_print_tree(ht->left);
+        huff_print_tree(ht->right);
+    }
+}
