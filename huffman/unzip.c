@@ -267,7 +267,7 @@ int main(void)
 
     if (DEBUG)
     {
-        printf("\nBytes to unzip = %lld\n", zipped_bytes_size);
+        printf("\nBytes to unzip = %ld\n", zipped_bytes_size);
     }
 
     char unzipped_path[MAX_FILENAME_SIZE];

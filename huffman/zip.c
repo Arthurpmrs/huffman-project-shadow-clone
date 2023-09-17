@@ -47,7 +47,7 @@ void print_byte_info(byte_info_t bytes[256])
             continue;
         }
 
-        printf("Byte %d (Freq=%d) | ", bytes[i].byte, bytes[i].frequency);
+        printf("Byte %d (Freq=%ld) | ", bytes[i].byte, bytes[i].frequency);
         printf("bit_sequence=");
         list_node_t *current = bytes[i].huff_bit_sequence->head;
         while (current != NULL)
@@ -174,6 +174,11 @@ bool write_header_to_file(FILE *output, huff_node_t *ht, uint8_t trash_size)
 
 bool copy_bytes_from_tmp_file(FILE *output)
 {
+    if (output == NULL)
+    {
+        return false;
+    }
+
     FILE *tmp = fopen(TMP_FILE_NAME, "rb");
 
     uint8_t byte = 0;
@@ -183,6 +188,8 @@ bool copy_bytes_from_tmp_file(FILE *output)
     }
 
     fclose(tmp);
+
+    return true;
 }
 
 bool zip(FILE *input, char zipped[MAX_FILENAME_SIZE], huff_node_t *ht, byte_info_t bytes[256])
