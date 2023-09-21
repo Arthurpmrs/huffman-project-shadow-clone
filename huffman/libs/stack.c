@@ -9,7 +9,7 @@ stack_t *stack_create(void (*print)(void *))
     return new_stack;
 }
 
-int stack_is_empty(stack_t *stack)
+bool stack_is_empty(stack_t *stack)
 {
     return stack->top == NULL;
 }
