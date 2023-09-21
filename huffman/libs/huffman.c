@@ -35,7 +35,7 @@ void huff_enqueue(huff_queue_t *hq, void *byte, uint64_t frequency,
     }
     else
     {
-        if (frequency < hq->head->frequency)
+        if (frequency <= hq->head->frequency)
         {
             new_node->next = hq->head;
             hq->head = new_node;
