@@ -216,8 +216,7 @@ int main(void)
         printf("\n");
     }
 
-    uint16_t aux_index = 0;
-    binary_tree_t *ht = reconstruct_tree(&aux_index, tree_size, preorder_tree);
+    binary_tree_t *ht = reconstruct_tree(preorder_tree);
 
     if (DEBUG)
     {

@@ -17,8 +17,7 @@ binary_tree_t *create_binary_tree(void *item, binary_tree_t *left, binary_tree_t
     return bt;
 }
 
-binary_tree_t *reconstruct_tree(uint16_t *i, uint16_t tree_size,
-                                uint8_t preorder_tree[tree_size])
+binary_tree_t *_reconstruct_tree(uint16_t *i, uint8_t preorder_tree[])
 {
     uint8_t *item = malloc(sizeof(uint8_t));
 
@@ -26,8 +25,8 @@ binary_tree_t *reconstruct_tree(uint16_t *i, uint16_t tree_size,
     {
         *item = '*';
         *i += 1;
-        binary_tree_t *left = reconstruct_tree(i, tree_size, preorder_tree);
-        binary_tree_t *right = reconstruct_tree(i, tree_size, preorder_tree);
+        binary_tree_t *left = _reconstruct_tree(i, preorder_tree);
+        binary_tree_t *right = _reconstruct_tree(i, preorder_tree);
         return create_binary_tree((void *)item, left, right);
     }
     else
@@ -45,6 +44,12 @@ binary_tree_t *reconstruct_tree(uint16_t *i, uint16_t tree_size,
 
         return create_binary_tree((void *)item, NULL, NULL);
     }
+}
+
+binary_tree_t *reconstruct_tree(uint8_t preorder_tree[])
+{
+    uint16_t i = 0;
+    return _reconstruct_tree(&i, preorder_tree);
 }
 
 void print_pre_order(binary_tree_t *bt, void (*print_fn)(void *))
