@@ -54,6 +54,12 @@ void *stack_pop(stack_t *stack)
 
 void *stack_peek(stack_t *stack)
 {
+    if (stack_is_empty(stack))
+    {
+        printf("List is empty.\n");
+        return NULL;
+    }
+
     return stack->top->item;
 }
 
